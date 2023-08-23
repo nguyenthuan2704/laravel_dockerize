@@ -1,0 +1,72 @@
+version: '3.8'
+services:
+
+  #PHP Service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USERNAME: nguyenthuan2704
+      DB_PASSWORD: admin123
+      DB_ROOT_PASSWORD: abc123
+      DB_DATABASE: rms2
+    volumes:
+      - ./:/var/www/html    
+    # entrypoint: ["composer", "install", "--ignore-platform-req=ext-gd"]
+    networks:
+      - app-network
+
+  #Nginx Service
+  webserver:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    volumes:
+      - ./:/var/www/html
+      # Mount file nginx.conf trên máy host vào file /etc/nginx/conf.d/default.conf của container nginx
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - app-network
+      
+  #MySQL Service
+  db:
+    image: mysql
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "3307:3306"
+    volumes:      
+      # Mount thư mục /var/lib/mysql của container mysql ra một thư mục bất kỳ trên máy host
+      - ./database/backup-database:/var/lib/mysql
+      # Mount file rms2 trên máy host vào file /docker-entrypoint-initdb.d/init.sql của container mysql
+      - ./database/rms2.sql:/docker-entrypoint-initdb.d/dump.sql
+      # - ./database/rms2.sql:/docker-entrypoint-initdb.d/init.sql
+    environment:
+      MYSQL_DATABASE: rms2
+      MYSQL_USER: nguyenthuan2704
+      MYSQL_PASSWORD: admin123
+      MYSQL_ROOT_PASSWORD: admin123
+    networks:
+      - app-network      
+
+    #PHPMyadmin
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: admin123
+    networks:
+      - app-network
+
+#Docker Networks
+networks:
+  app-network:
+    driver: bridge
